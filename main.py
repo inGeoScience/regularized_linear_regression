@@ -22,42 +22,43 @@ def compute_cost_function(X, y, w, b, lambda_):
     return squared_error + regularization_term
 
 
-# 梯度下降
-def gradient_descent(X, y, w, b, alpha, iters, lambda_):
-    # 初始化临时参数向量与截距项
-    tmp_w = numpy.zeros(X.shape[1])
-    tmp_b = 0
-    # 获取样本量与特征数
-    m, n = X.shape
-    # 初始化偏导数
+# 计算梯度
+def compute_gradient(X_in, y_in, w_in, b_in, lambda_):
+    # m为样本量，n为特征数量
+    m, n = X_in.shape
+    # 初始化dj_dw列表与dj_db
     dj_dw = numpy.zeros(n)
     dj_db = 0
-    # 进入梯度下降
-    for iter_ in range(iters):
-        # 计算偏导数（梯度）
+    # 计算dj_dw
+    for j in range(n):
         for i in range(m):
-            error = numpy.dot(w, X[i]) + b - y[i]
-            for j in range(n):
-                dj_dw[j] += numpy.dot(error, X[i, j])
-            dj_db += error
-        dj_dw /= m
-        dj_db /= m
+            dj_dw[j] += (numpy.dot(X_in[i], w_in) + b_in - y_in[i]) * X_in[i][j]
+        dj_dw[j] /= m
+        # 加上正则化项
+        dj_dw[j] += (lambda_ / m) * w_in[j]
+    # 计算dj_db
+    for i in range(m):
+        dj_db += numpy.dot(X_in[i], w_in) + b_in - y_in[i]
+    dj_db /= m
+    return dj_dw, dj_db
+
+
+# 梯度下降
+def gradient_descent(X_in, y_in, w_in, b_in, iters, alpha, lambda_):
+    # m为样本数量，n为特征数量
+    m, n = X_in.shape
+    for i in range(iters):
+        dj_dw, dj_db = compute_gradient(X_in, y_in, w_in, b_in, lambda_)
         for j in range(n):
-            dj_dw[j] += (lambda_ / m) * w[j]
-        # 执行一次梯度下降
-        tmp_w = w - alpha * dj_dw
-        tmp_b = b - alpha * dj_db
-        # 同步更新
-        w = tmp_w
-        b = tmp_b
-        # 计算此次代价
-        total_cost = compute_cost_function(X=X_train, y=y_train, w=w, b=b, lambda_=lambda_)
-    return w, b, total_cost
+            w_in[j] = w_in[j] - alpha * dj_dw[j]
+        b_in = b_in - alpha * dj_db
+    loss = compute_cost_function(X_in, y_in, w_in, b_in, lambda_)
+    return w_in, b_in, loss
 
 
 # 导入数据
 data = pandas.read_csv('ex1data2.txt', header=None, names=['Size', 'Bedrooms', 'Price'])
-# Mean Normalization
+# Mean Normalization，也可以将.loc()替换为.iloc()后列明替换为索引
 for col in ['Size', 'Bedrooms']:
     data.loc[:, col] = (data.loc[:, col] - data.loc[:, col].mean()) / (data.loc[:, col].max() - data.loc[:, col].min())
 data.loc[:, 'Price'] = data.loc[:, 'Price'].apply(lambda x: x / 10000)
@@ -69,12 +70,12 @@ X_train = numpy.array(X_train.values)  # 这样获得一个2D array，如果转�
 y_train = numpy.array(data.iloc[:, data.shape[1] - 1:data.shape[1]].values)
 # 初始化w和b，w是一个1d array
 w = numpy.zeros(X_train.shape[1])
-b = 0
+b = 0.
 # 输入λ、α与迭代次数
 lambda_ = float(input('Lambda:'))
 alpha = float(input('alpha:'))
 iters_ = int(input('iters:'))
 # 进行正则化线性回归梯度下降求解
-w, b, tt_cost = gradient_descent(X=X_train, y=y_train, w=w, b=b, alpha=alpha, iters=iters_, lambda_=lambda_)
+w, b, tt_cost = gradient_descent(X_train, y_train, w, b, iters_, alpha, lambda_)
 # 输出结果
 print(f'w:{w}\nb:{b}\ntotal_cost:{tt_cost}')
